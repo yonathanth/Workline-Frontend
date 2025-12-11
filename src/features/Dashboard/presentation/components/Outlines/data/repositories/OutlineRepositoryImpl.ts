@@ -3,7 +3,7 @@ import { Outline } from '../../domain/entities/Outline'
 import { IOutlineRepository } from '../../domain/repositories/IOutlineRepository'
 
 export class OutlineRepositoryImpl implements IOutlineRepository {
-    private readonly baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://workline-backend.vercel.app'
+    private readonly baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://workline.api.shalops.com/'
 
     async getOutlines(organizationId: string): Promise<Outline[]> {
         const { data, error } = await authClient.$fetch<Outline[]>(`${this.baseURL}/api/organizations/${organizationId}/outlines`)

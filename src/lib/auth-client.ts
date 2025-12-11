@@ -2,7 +2,7 @@ import { createAuthClient } from "better-auth/react"
 import { organizationClient } from "better-auth/client/plugins"
 
 export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://workline-backend.vercel.app",
+    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://workline.api.shalops.com/",
     plugins: [
         organizationClient()
     ],
@@ -12,4 +12,4 @@ export const authClient = createAuthClient({
 })
 
 // Log to verify configuration
-console.log('🔐 Auth Client configured with baseURL:', process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://workline-backend.vercel.app")
+console.log('🔐 Auth Client configured with baseURL:', process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://workline.api.shalops.com/")
