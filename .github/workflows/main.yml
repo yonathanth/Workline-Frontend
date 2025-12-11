@@ -1,0 +1,47 @@
+name: Deploy Workline Front
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+
+jobs:
+  deploy_production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Connect with VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            mkdir -p apps/workline-front && cd apps/workline-front
+            
+            if [ -d ".git" ]; then
+              git stash
+              git pull origin main
+            else
+              git clone -b main https://github.com/yonathanth/Workline-Frontend.git .
+            fi
+          
+            npm install --force
+            npm run build
+
+            pid=$(pm2 pid "workline-front" 2>/dev/null)
+            if [ -n "$pid" ]; then
+              echo "Reloading workline-front"
+              pm2 reload "workline-front"
+              pm2 save
+            else
+              echo "New application"
+              pm2 start npm --name "workline-front" -- start
+              pm2 startup
+              pm2 save
+            fi
