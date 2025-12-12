@@ -29,7 +29,17 @@ export const useOrganization = () => {
         enabled: !!session?.user,
         retry: 2,
         staleTime: 30000, // Consider data fresh for 30 seconds
+        refetchOnMount: true, // Always refetch when component mounts
     })
+
+    // Force refetch organizations when session becomes available
+    useEffect(() => {
+        if (session?.user && !organizationsQuery.data && !organizationsQuery.isFetching && !organizationsQuery.isLoading) {
+            console.log('🔄 Session available, refetching organizations...')
+            organizationsQuery.refetch()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [session?.user, organizationsQuery.data, organizationsQuery.isFetching, organizationsQuery.isLoading])
 
     const createOrganizationMutation = useMutation({
         mutationFn: (params: { name: string; slug: string }) =>
@@ -112,10 +122,12 @@ export const useOrganization = () => {
     const activeOrganization = organizationsQuery.data?.find(org => org.id === activeOrganizationId) || null
 
     // Determine loading state:
-    // - Only show loading if session exists with a user AND organizations are still loading
+    // - Show loading if session exists with a user AND (organizations are loading OR fetching)
+    // - Also show loading if session exists but organizations haven't been fetched yet (no data and not error)
     // - Don't show loading if session is undefined (waiting for auth) or if there's no user (not authenticated)
-    // This prevents infinite loading states when session hasn't loaded yet
-    const isLoading = session?.user ? organizationsQuery.isLoading : false
+    const isLoading = session?.user 
+        ? (organizationsQuery.isLoading || organizationsQuery.isFetching || (!organizationsQuery.data && !organizationsQuery.error))
+        : false
 
     return {
         organizations: organizationsQuery.data || [],

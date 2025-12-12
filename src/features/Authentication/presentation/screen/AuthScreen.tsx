@@ -45,16 +45,18 @@ const AuthScreen = () => {
                 console.log('✅ Session verified successfully')
                 success('Login successful! Redirecting...')
 
-                // Small delay to ensure all state is updated
-                await new Promise(resolve => setTimeout(resolve, 300))
+                // Use window.location.href to force a full page reload
+                // This ensures better-auth's useSession hook re-initializes with the new session
+                // and all queries start fresh with the authenticated state
+                await new Promise(resolve => setTimeout(resolve, 500))
 
                 // If invitation ID is present, redirect to the invitation page
                 // This allows the user to see the invitation details and accept it
                 if (invitationId) {
                     console.log('🎫 Redirecting to invitation:', invitationId)
-                    router.push(`/accept-invitation/${invitationId}`)
+                    window.location.href = `/accept-invitation/${invitationId}`
                 } else {
-                    router.push('/dashboard')
+                    window.location.href = '/dashboard'
                 }
             } else {
                 console.error('❌ No session data after login')
