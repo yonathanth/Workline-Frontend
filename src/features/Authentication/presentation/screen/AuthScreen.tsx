@@ -30,7 +30,7 @@ const AuthScreen = () => {
             // Give time for cookies to be set
             await new Promise(resolve => setTimeout(resolve, 800))
 
-            // Verify session was actually established
+            // Verify session was actually established and refetch it
             console.log('🔍 Verifying session...')
             const { data: verifiedSession, error: sessionError } = await authClient.getSession()
             console.log('📋 Session verification result:', { verifiedSession, sessionError })
@@ -45,16 +45,17 @@ const AuthScreen = () => {
                 console.log('✅ Session verified successfully')
                 success('Login successful! Redirecting...')
 
-                setTimeout(() => {
-                    // If invitation ID is present, redirect to the invitation page
-                    // This allows the user to see the invitation details and accept it
-                    if (invitationId) {
-                        console.log('🎫 Redirecting to invitation:', invitationId)
-                        router.push(`/accept-invitation/${invitationId}`)
-                    } else {
-                        router.push('/dashboard')
-                    }
-                }, 500)
+                // Small delay to ensure all state is updated
+                await new Promise(resolve => setTimeout(resolve, 300))
+
+                // If invitation ID is present, redirect to the invitation page
+                // This allows the user to see the invitation details and accept it
+                if (invitationId) {
+                    console.log('🎫 Redirecting to invitation:', invitationId)
+                    router.push(`/accept-invitation/${invitationId}`)
+                } else {
+                    router.push('/dashboard')
+                }
             } else {
                 console.error('❌ No session data after login')
                 error('Login succeeded but session not established. Please check your browser cookies or try again.')

@@ -4,6 +4,7 @@ import { LoginUseCase } from '../../application/usecases/LoginUseCase'
 import { SignupUseCase } from '../../application/usecases/SignupUseCase'
 import { SocialLoginUseCase } from '../../application/usecases/SocialLoginUseCase'
 import { LoginCredentials, SignupCredentials, SocialLoginParams } from '../../domain/repositories/IAuthRepository'
+import { authClient } from '@/lib/auth-client'
 
 // Initialize repository and use cases
 // In a real app, these might be injected via a DI container or context
@@ -17,20 +18,42 @@ export const useAuth = () => {
 
     const loginMutation = useMutation({
         mutationFn: (credentials: LoginCredentials) => loginUseCase.execute(credentials),
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
+            // Set the session data in React Query cache
             queryClient.setQueryData(['session'], data)
+            // Refetch the session using better-auth's method to ensure it's up to date
+            // This ensures better-auth's internal state is updated
+            await authClient.getSession()
+            // Invalidate all queries that depend on session to trigger refetch
+            await queryClient.invalidateQueries({ queryKey: ['session'] })
+            await queryClient.invalidateQueries({ queryKey: ['organizations'] })
         },
     })
 
     const signupMutation = useMutation({
         mutationFn: (credentials: SignupCredentials) => signupUseCase.execute(credentials),
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
+            // Set the session data in React Query cache
             queryClient.setQueryData(['session'], data)
+            // Refetch the session using better-auth's method to ensure it's up to date
+            // This ensures better-auth's internal state is updated
+            await authClient.getSession()
+            // Invalidate all queries that depend on session to trigger refetch
+            await queryClient.invalidateQueries({ queryKey: ['session'] })
+            await queryClient.invalidateQueries({ queryKey: ['organizations'] })
         },
     })
 
     const socialLoginMutation = useMutation({
         mutationFn: (params: SocialLoginParams) => socialLoginUseCase.execute(params),
+        onSuccess: async () => {
+            // Refetch the session using better-auth's method
+            // This ensures better-auth's internal state is updated
+            await authClient.getSession()
+            // Invalidate all queries that depend on session to trigger refetch
+            await queryClient.invalidateQueries({ queryKey: ['session'] })
+            await queryClient.invalidateQueries({ queryKey: ['organizations'] })
+        },
     })
 
     return {

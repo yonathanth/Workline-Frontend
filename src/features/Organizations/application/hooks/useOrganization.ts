@@ -27,6 +27,8 @@ export const useOrganization = () => {
         queryKey: ['organizations'],
         queryFn: () => getOrganizationsUseCase.execute(),
         enabled: !!session?.user,
+        retry: 2,
+        staleTime: 30000, // Consider data fresh for 30 seconds
     })
 
     const createOrganizationMutation = useMutation({
@@ -109,9 +111,15 @@ export const useOrganization = () => {
     // Derived active organization
     const activeOrganization = organizationsQuery.data?.find(org => org.id === activeOrganizationId) || null
 
+    // Determine loading state:
+    // - Only show loading if session exists with a user AND organizations are still loading
+    // - Don't show loading if session is undefined (waiting for auth) or if there's no user (not authenticated)
+    // This prevents infinite loading states when session hasn't loaded yet
+    const isLoading = session?.user ? organizationsQuery.isLoading : false
+
     return {
         organizations: organizationsQuery.data || [],
-        isLoading: organizationsQuery.isLoading || !session,
+        isLoading,
         error: organizationsQuery.error,
         createOrganization: createOrganizationMutation.mutateAsync,
         setActiveOrganization: setActiveOrganizationMutation.mutateAsync,
