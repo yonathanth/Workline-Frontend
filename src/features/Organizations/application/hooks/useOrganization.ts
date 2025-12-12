@@ -25,44 +25,9 @@ export const useOrganization = () => {
 
     const organizationsQuery = useQuery({
         queryKey: ['organizations'],
-        queryFn: async () => {
-            console.log('📡 [useOrganization] Fetching organizations...')
-            try {
-                const result = await getOrganizationsUseCase.execute()
-                console.log('✅ [useOrganization] Organizations fetched:', result)
-                return result
-            } catch (error) {
-                console.error('❌ [useOrganization] Error fetching organizations:', error)
-                throw error
-            }
-        },
+        queryFn: () => getOrganizationsUseCase.execute(),
         enabled: !!session?.user,
-        retry: 2,
-        staleTime: 30000, // Consider data fresh for 30 seconds
-        refetchOnMount: true, // Always refetch when component mounts
     })
-
-    // Debug logging for query state
-    useEffect(() => {
-        console.log('🔍 [useOrganization] Query state:', {
-            hasSession: !!session?.user,
-            isLoading: organizationsQuery.isLoading,
-            isFetching: organizationsQuery.isFetching,
-            hasData: organizationsQuery.data !== undefined,
-            dataLength: organizationsQuery.data?.length ?? 0,
-            error: organizationsQuery.error,
-            enabled: !!session?.user
-        })
-    }, [session?.user, organizationsQuery.isLoading, organizationsQuery.isFetching, organizationsQuery.data, organizationsQuery.error])
-
-    // Force refetch organizations when session becomes available
-    useEffect(() => {
-        if (session?.user && organizationsQuery.data === undefined && !organizationsQuery.isFetching && !organizationsQuery.isLoading && !organizationsQuery.error) {
-            console.log('🔄 [useOrganization] Session available but no data, refetching organizations...')
-            organizationsQuery.refetch()
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session?.user, organizationsQuery.data, organizationsQuery.isFetching, organizationsQuery.isLoading, organizationsQuery.error])
 
     const createOrganizationMutation = useMutation({
         mutationFn: (params: { name: string; slug: string }) =>
@@ -117,7 +82,6 @@ export const useOrganization = () => {
             if (session?.session?.activeOrganizationId) {
                 try {
                     const { data } = await authClient.organization.getActiveMemberRole()
-
                     if (data?.role && currentUserRole !== data.role) {
                         dispatch(setCurrentUserRole(data.role))
                     }
@@ -131,31 +95,40 @@ export const useOrganization = () => {
     }, [session, activeOrganizationId, currentUserRole, dispatch])
 
     // Auto-select first organization if user has orgs but no active org
+    // Wait for session to be fully established before auto-selecting
     useEffect(() => {
         const organizations = organizationsQuery.data || []
-        if (organizations.length > 0 && !activeOrganizationId && !organizationsQuery.isLoading) {
+
+        // Only auto-select if:
+        // 1. We have organizations
+        // 2. No active org is set
+        // 3. Query is not loading
+        // 4. Session is fully established (user exists)
+        // 5. Mutation is not already running
+        if (
+            organizations.length > 0 &&
+            !activeOrganizationId &&
+            !organizationsQuery.isLoading &&
+            session?.user &&
+            !setActiveOrganizationMutation.isPending
+        ) {
             const firstOrg = organizations[0]
             if (firstOrg?.id) {
-                setActiveOrganizationMutation.mutate(firstOrg.id)
+                console.log('🔄 Auto-selecting first organization:', firstOrg.id)
+                // Add small delay to ensure backend is ready after OAuth
+                setTimeout(() => {
+                    setActiveOrganizationMutation.mutate(firstOrg.id)
+                }, 300)
             }
         }
-    }, [organizationsQuery.data, activeOrganizationId, organizationsQuery.isLoading])
+    }, [organizationsQuery.data, activeOrganizationId, organizationsQuery.isLoading, session?.user, setActiveOrganizationMutation.isPending])
 
     // Derived active organization
     const activeOrganization = organizationsQuery.data?.find(org => org.id === activeOrganizationId) || null
 
-    // Determine loading state:
-    // - Show loading if session exists with a user AND (organizations are loading OR fetching)
-    // - Also show loading if session exists but organizations haven't been fetched yet (data is undefined and not error)
-    // - Don't show loading if data is an empty array (that's valid - user has no orgs)
-    // - Don't show loading if session is undefined (waiting for auth) or if there's no user (not authenticated)
-    const isLoading = session?.user 
-        ? (organizationsQuery.isLoading || organizationsQuery.isFetching || (organizationsQuery.data === undefined && !organizationsQuery.error))
-        : false
-
     return {
         organizations: organizationsQuery.data || [],
-        isLoading,
+        isLoading: organizationsQuery.isLoading  !session  setActiveOrganizationMutation.isPending,
         error: organizationsQuery.error,
         createOrganization: createOrganizationMutation.mutateAsync,
         setActiveOrganization: setActiveOrganizationMutation.mutateAsync,
