@@ -20,12 +20,12 @@ export function AccountScreen() {
             try {
                 const { data, error } = await authClient.getSession()
                 if (error) {
-                    console.error('❌ [AccountScreen] Session error:', error)
+                    console.error(' [AccountScreen] Session error:', error)
                 } else {
-                    console.log('✅ [AccountScreen] Session refetched:', data)
+                    console.log(' [AccountScreen] Session refetched:', data)
                 }
             } catch (error) {
-                console.error('❌ [AccountScreen] Error refetching session:', error)
+                console.error(' [AccountScreen] Error refetching session:', error)
             }
         }
         
