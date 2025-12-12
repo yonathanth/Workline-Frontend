@@ -17,60 +17,19 @@ const setActiveOrganizationUseCase = new SetActiveOrganizationUseCase(organizati
 
 export const useOrganization = () => {
     const queryClient = useQueryClient()
-    const sessionResult = authClient.useSession()
-    const session = sessionResult?.data
+    const { data: session } = authClient.useSession()
 
     const dispatch = useAppDispatch()
     const activeOrganizationId = useAppSelector((state) => state.organizations.activeOrganizationId)
     const currentUserRole = useAppSelector((state) => state.organizations.currentUserRole)
 
-    // Debug logging
-    useEffect(() => {
-        console.log('🔍 [useOrganization] Session state:', {
-            hasSession: !!session,
-            hasUser: !!session?.user,
-            sessionData: session,
-            sessionResult: sessionResult
-        })
-    }, [session, sessionResult])
-
     const organizationsQuery = useQuery({
         queryKey: ['organizations'],
-        queryFn: async () => {
-            console.log('📡 [useOrganization] Fetching organizations...')
-            try {
-                const result = await getOrganizationsUseCase.execute()
-                console.log('✅ [useOrganization] Organizations fetched:', result)
-                return result
-            } catch (error) {
-                console.error('❌ [useOrganization] Error fetching organizations:', error)
-                throw error
-            }
-        },
+        queryFn: () => getOrganizationsUseCase.execute(),
         enabled: !!session?.user,
         retry: 2,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
         staleTime: 30000, // Consider data fresh for 30 seconds
     })
-
-    // Force refetch organizations when session becomes available
-    useEffect(() => {
-        if (session?.user && !organizationsQuery.data && !organizationsQuery.isFetching) {
-            console.log('🔄 [useOrganization] Session available, refetching organizations...')
-            organizationsQuery.refetch()
-        }
-    }, [session?.user, organizationsQuery.data, organizationsQuery.isFetching])
-
-    // Debug organizations query state
-    useEffect(() => {
-        console.log('🔍 [useOrganization] Organizations query state:', {
-            isLoading: organizationsQuery.isLoading,
-            isError: organizationsQuery.isError,
-            error: organizationsQuery.error,
-            data: organizationsQuery.data,
-            enabled: !!session?.user
-        })
-    }, [organizationsQuery.isLoading, organizationsQuery.isError, organizationsQuery.error, organizationsQuery.data, session?.user])
 
     const createOrganizationMutation = useMutation({
         mutationFn: (params: { name: string; slug: string }) =>
@@ -116,7 +75,6 @@ export const useOrganization = () => {
     useEffect(() => {
         // Set active org ID from session if not in Redux
         if (session?.session?.activeOrganizationId && !activeOrganizationId) {
-            console.log('🔄 [useOrganization] Setting active org from session:', session.session.activeOrganizationId)
             dispatch(setActiveOrgRedux(session.session.activeOrganizationId))
         }
 
@@ -125,15 +83,13 @@ export const useOrganization = () => {
         const fetchRole = async () => {
             if (session?.session?.activeOrganizationId) {
                 try {
-                    console.log('🔍 [useOrganization] Fetching role for org:', session.session.activeOrganizationId)
                     const { data } = await authClient.organization.getActiveMemberRole()
 
                     if (data?.role && currentUserRole !== data.role) {
-                        console.log('✅ [useOrganization] Role fetched:', data.role)
                         dispatch(setCurrentUserRole(data.role))
                     }
                 } catch (error) {
-                    console.error('❌ [useOrganization] Error fetching role:', error)
+                    console.error('❌ Error fetching role:', error)
                 }
             }
         }
@@ -147,12 +103,10 @@ export const useOrganization = () => {
         if (organizations.length > 0 && !activeOrganizationId && !organizationsQuery.isLoading) {
             const firstOrg = organizations[0]
             if (firstOrg?.id) {
-                console.log('🔄 [useOrganization] Auto-selecting first organization:', firstOrg.id)
                 setActiveOrganizationMutation.mutate(firstOrg.id)
             }
         }
-    }, [organizationsQuery.data, activeOrganizationId, organizationsQuery.isLoading, setActiveOrganizationMutation])
-
+    }, [organizationsQuery.data, activeOrganizationId, organizationsQuery.isLoading])
 
     // Derived active organization
     const activeOrganization = organizationsQuery.data?.find(org => org.id === activeOrganizationId) || null

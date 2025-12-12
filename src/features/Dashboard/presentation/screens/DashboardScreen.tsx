@@ -17,30 +17,9 @@ import { DashboardSkeleton } from "@/features/Dashboard/presentation/components/
 
 export function DashboardScreen() {
     const router = useRouter()
-    const sessionResult = authClient.useSession()
-    const session = sessionResult?.data
+    const { data: session } = authClient.useSession()
     const { activeOrganizationId, isLoading: isOrgLoading } = useOrganization()
     const { outlines, isLoading: isOutlinesLoading, updateOutline, deleteOutline } = useOutlines(activeOrganizationId || undefined)
-
-    // Ensure session is refetched when dashboard loads
-    useEffect(() => {
-        const refetchSession = async () => {
-            console.log('🔄 [DashboardScreen] Refetching session on mount...')
-            try {
-                const { data, error } = await authClient.getSession()
-                if (error) {
-                    console.error('❌ [DashboardScreen] Session error:', error)
-                } else {
-                    console.log('✅ [DashboardScreen] Session refetched:', data)
-                }
-            } catch (error) {
-                console.error('❌ [DashboardScreen] Error refetching session:', error)
-            }
-        }
-        
-        // Refetch session on mount to ensure it's up to date
-        refetchSession()
-    }, []) // Only run on mount
 
     const [selectedOutline, setSelectedOutline] = useState<Outline | null>(null)
     const [isEditSidebarOpen, setIsEditSidebarOpen] = useState(false)
