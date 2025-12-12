@@ -10,6 +10,7 @@ import { LoginForm } from '../components/LoginForm'
 import { SignupForm } from '../components/SignupForm'
 import { GalleryVerticalEnd } from 'lucide-react'
 import { GridBackground } from '../components/GridBackground'
+import { detectBrowser, getCookieHelpMessage, isCrossOriginRequest } from '@/lib/browser-utils'
 import Image from 'next/image'
 
 const AuthScreen = () => {
@@ -37,7 +38,18 @@ const AuthScreen = () => {
 
             if (sessionError) {
                 console.error('❌ Session verification error:', sessionError)
-                error('Session verification failed. Please try again.')
+                
+                // Check if this is a cross-origin cookie issue
+                const baseURL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://workline.api.shalops.com/"
+                const isCrossOrigin = isCrossOriginRequest(baseURL)
+                const browser = detectBrowser()
+                
+                if (isCrossOrigin && (browser === 'firefox' || browser === 'safari')) {
+                    const helpMessage = getCookieHelpMessage(browser)
+                    error(`Authentication failed. ${helpMessage}`)
+                } else {
+                    error('Session verification failed. Please try again.')
+                }
                 return
             }
 
@@ -58,7 +70,18 @@ const AuthScreen = () => {
                 }
             } else {
                 console.error('❌ No session data after login')
-                error('Login succeeded but session not established. Please check your browser cookies or try again.')
+                
+                // Check if this is a cross-origin cookie issue
+                const baseURL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://workline.api.shalops.com/"
+                const isCrossOrigin = isCrossOriginRequest(baseURL)
+                const browser = detectBrowser()
+                
+                if (isCrossOrigin && (browser === 'firefox' || browser === 'safari')) {
+                    const helpMessage = getCookieHelpMessage(browser)
+                    error(`Login succeeded but session not established. ${helpMessage}`)
+                } else {
+                    error('Login succeeded but session not established. Please check your browser cookies or try again.')
+                }
             }
         } catch (err: any) {
             console.error('❌ Login failed:', err)

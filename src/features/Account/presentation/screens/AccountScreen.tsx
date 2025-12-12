@@ -7,9 +7,31 @@ import { AvatarSelector } from "../components/AvatarSelector"
 import { ProfileForm } from "../components/ProfileForm"
 import { PasswordForm } from "../components/PasswordForm"
 import { authClient } from "@/lib/auth-client"
+import { useEffect } from "react"
 
 export function AccountScreen() {
-    const { data: session } = authClient.useSession()
+    const sessionResult = authClient.useSession()
+    const session = sessionResult?.data
+
+    // Ensure session is refetched when account screen loads
+    useEffect(() => {
+        const refetchSession = async () => {
+            console.log('🔄 [AccountScreen] Refetching session on mount...')
+            try {
+                const { data, error } = await authClient.getSession()
+                if (error) {
+                    console.error('❌ [AccountScreen] Session error:', error)
+                } else {
+                    console.log('✅ [AccountScreen] Session refetched:', data)
+                }
+            } catch (error) {
+                console.error('❌ [AccountScreen] Error refetching session:', error)
+            }
+        }
+        
+        // Refetch session on mount to ensure it's up to date
+        refetchSession()
+    }, []) // Only run on mount
 
     return (
         <SidebarInset>
