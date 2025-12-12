@@ -126,9 +126,16 @@ export const useOrganization = () => {
     // Derived active organization
     const activeOrganization = organizationsQuery.data?.find(org => org.id === activeOrganizationId) || null
 
+    // Determine loading state:
+    // - Show loading if organizations query is loading OR switching organization is pending
+    // - Only show loading if session exists (if no session, that's a different state)
+    const isLoading = session?.user 
+        ? (organizationsQuery.isLoading || setActiveOrganizationMutation.isPending)
+        : false
+
     return {
         organizations: organizationsQuery.data || [],
-        isLoading: organizationsQuery.isLoading  !session  setActiveOrganizationMutation.isPending,
+        isLoading,
         error: organizationsQuery.error,
         createOrganization: createOrganizationMutation.mutateAsync,
         setActiveOrganization: setActiveOrganizationMutation.mutateAsync,
