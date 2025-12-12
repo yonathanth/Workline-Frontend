@@ -25,21 +25,44 @@ export const useOrganization = () => {
 
     const organizationsQuery = useQuery({
         queryKey: ['organizations'],
-        queryFn: () => getOrganizationsUseCase.execute(),
+        queryFn: async () => {
+            console.log('📡 [useOrganization] Fetching organizations...')
+            try {
+                const result = await getOrganizationsUseCase.execute()
+                console.log('✅ [useOrganization] Organizations fetched:', result)
+                return result
+            } catch (error) {
+                console.error('❌ [useOrganization] Error fetching organizations:', error)
+                throw error
+            }
+        },
         enabled: !!session?.user,
         retry: 2,
         staleTime: 30000, // Consider data fresh for 30 seconds
         refetchOnMount: true, // Always refetch when component mounts
     })
 
+    // Debug logging for query state
+    useEffect(() => {
+        console.log('🔍 [useOrganization] Query state:', {
+            hasSession: !!session?.user,
+            isLoading: organizationsQuery.isLoading,
+            isFetching: organizationsQuery.isFetching,
+            hasData: organizationsQuery.data !== undefined,
+            dataLength: organizationsQuery.data?.length ?? 0,
+            error: organizationsQuery.error,
+            enabled: !!session?.user
+        })
+    }, [session?.user, organizationsQuery.isLoading, organizationsQuery.isFetching, organizationsQuery.data, organizationsQuery.error])
+
     // Force refetch organizations when session becomes available
     useEffect(() => {
-        if (session?.user && !organizationsQuery.data && !organizationsQuery.isFetching && !organizationsQuery.isLoading) {
-            console.log('🔄 Session available, refetching organizations...')
+        if (session?.user && organizationsQuery.data === undefined && !organizationsQuery.isFetching && !organizationsQuery.isLoading && !organizationsQuery.error) {
+            console.log('🔄 [useOrganization] Session available but no data, refetching organizations...')
             organizationsQuery.refetch()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session?.user, organizationsQuery.data, organizationsQuery.isFetching, organizationsQuery.isLoading])
+    }, [session?.user, organizationsQuery.data, organizationsQuery.isFetching, organizationsQuery.isLoading, organizationsQuery.error])
 
     const createOrganizationMutation = useMutation({
         mutationFn: (params: { name: string; slug: string }) =>
@@ -123,10 +146,11 @@ export const useOrganization = () => {
 
     // Determine loading state:
     // - Show loading if session exists with a user AND (organizations are loading OR fetching)
-    // - Also show loading if session exists but organizations haven't been fetched yet (no data and not error)
+    // - Also show loading if session exists but organizations haven't been fetched yet (data is undefined and not error)
+    // - Don't show loading if data is an empty array (that's valid - user has no orgs)
     // - Don't show loading if session is undefined (waiting for auth) or if there's no user (not authenticated)
     const isLoading = session?.user 
-        ? (organizationsQuery.isLoading || organizationsQuery.isFetching || (!organizationsQuery.data && !organizationsQuery.error))
+        ? (organizationsQuery.isLoading || organizationsQuery.isFetching || (organizationsQuery.data === undefined && !organizationsQuery.error))
         : false
 
     return {
