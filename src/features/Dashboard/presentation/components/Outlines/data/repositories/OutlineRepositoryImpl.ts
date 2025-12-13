@@ -3,24 +3,12 @@ import { Outline } from '../../domain/entities/Outline'
 import { IOutlineRepository } from '../../domain/repositories/IOutlineRepository'
 
 export class OutlineRepositoryImpl implements IOutlineRepository {
-    private readonly baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://workline.api.shalops.com/'
+    private readonly baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://workline-backend.vercel.app'
 
     async getOutlines(organizationId: string): Promise<Outline[]> {
-        try {
-            console.log('📡 [OutlineRepository] Fetching outlines for org:', organizationId)
-            const { data, error } = await authClient.$fetch<Outline[]>(`${this.baseURL}/api/organizations/${organizationId}/outlines`)
-            
-            if (error) {
-                console.error('❌ [OutlineRepository] Error from API:', error)
-                throw new Error(error.message || 'Failed to fetch outlines')
-            }
-            
-            console.log('✅ [OutlineRepository] Outlines fetched:', data)
-            return data || []
-        } catch (error) {
-            console.error('❌ [OutlineRepository] Exception fetching outlines:', error)
-            throw error
-        }
+        const { data, error } = await authClient.$fetch<Outline[]>(`${this.baseURL}/api/organizations/${organizationId}/outlines`)
+        if (error) throw new Error(error.message || 'Failed to fetch outlines')
+        return data || []
     }
 
     async createOutline(organizationId: string, outline: Omit<Outline, 'id' | 'createdAt' | 'updatedAt' | 'organizationId'>): Promise<Outline> {

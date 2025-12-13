@@ -30,7 +30,7 @@ const AuthScreen = () => {
             // Give time for cookies to be set
             await new Promise(resolve => setTimeout(resolve, 800))
 
-            // Verify session was actually established and refetch it
+            // Verify session was actually established
             console.log('🔍 Verifying session...')
             const { data: verifiedSession, error: sessionError } = await authClient.getSession()
             console.log('📋 Session verification result:', { verifiedSession, sessionError })
@@ -45,19 +45,16 @@ const AuthScreen = () => {
                 console.log('✅ Session verified successfully')
                 success('Login successful! Redirecting...')
 
-                // Use window.location.href to force a full page reload
-                // This ensures better-auth's useSession hook re-initializes with the new session
-                // and all queries start fresh with the authenticated state
-                await new Promise(resolve => setTimeout(resolve, 500))
-
-                // If invitation ID is present, redirect to the invitation page
-                // This allows the user to see the invitation details and accept it
-                if (invitationId) {
-                    console.log('🎫 Redirecting to invitation:', invitationId)
-                    window.location.href = `/accept-invitation/${invitationId}`
-                } else {
-                    window.location.href = '/dashboard'
-                }
+                setTimeout(() => {
+                    // If invitation ID is present, redirect to the invitation page
+                    // This allows the user to see the invitation details and accept it
+                    if (invitationId) {
+                        console.log('🎫 Redirecting to invitation:', invitationId)
+                        router.push(`/accept-invitation/${invitationId}`)
+                    } else {
+                        router.push('/dashboard')
+                    }
+                }, 500)
             } else {
                 console.error('❌ No session data after login')
                 error('Login succeeded but session not established. Please check your browser cookies or try again.')

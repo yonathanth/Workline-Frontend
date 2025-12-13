@@ -17,7 +17,7 @@ const setActiveOrganizationUseCase = new SetActiveOrganizationUseCase(organizati
 
 export const useOrganization = () => {
     const queryClient = useQueryClient()
-    const { data: session } = authClient.useSession()
+    const { data: session, isPending: isSessionLoading } = authClient.useSession()
 
     const dispatch = useAppDispatch()
     const activeOrganizationId = useAppSelector((state) => state.organizations.activeOrganizationId)
@@ -69,6 +69,15 @@ export const useOrganization = () => {
         }
     })
 
+    // Refetch organizations when session becomes available (e.g., after OAuth)
+    // This solves the race condition where the query is disabled during initial load
+    useEffect(() => {
+        if (session?.user && !organizationsQuery.data && !organizationsQuery.isFetching) {
+            console.log('📡 Session now available, refetching organizations')
+            queryClient.invalidateQueries({ queryKey: ['organizations'] })
+        }
+    }, [session?.user, queryClient])
+
     // Sync Redux with session and fetch role from Better Auth
     useEffect(() => {
         // Set active org ID from session if not in Redux
@@ -82,6 +91,7 @@ export const useOrganization = () => {
             if (session?.session?.activeOrganizationId) {
                 try {
                     const { data } = await authClient.organization.getActiveMemberRole()
+
                     if (data?.role && currentUserRole !== data.role) {
                         dispatch(setCurrentUserRole(data.role))
                     }
@@ -95,47 +105,22 @@ export const useOrganization = () => {
     }, [session, activeOrganizationId, currentUserRole, dispatch])
 
     // Auto-select first organization if user has orgs but no active org
-    // Wait for session to be fully established before auto-selecting
     useEffect(() => {
         const organizations = organizationsQuery.data || []
-
-        // Only auto-select if:
-        // 1. We have organizations
-        // 2. No active org is set
-        // 3. Query is not loading
-        // 4. Session is fully established (user exists)
-        // 5. Mutation is not already running
-        if (
-            organizations.length > 0 &&
-            !activeOrganizationId &&
-            !organizationsQuery.isLoading &&
-            session?.user &&
-            !setActiveOrganizationMutation.isPending
-        ) {
+        if (organizations.length > 0 && !activeOrganizationId && !organizationsQuery.isLoading) {
             const firstOrg = organizations[0]
             if (firstOrg?.id) {
-                console.log('🔄 Auto-selecting first organization:', firstOrg.id)
-                // Add small delay to ensure backend is ready after OAuth
-                setTimeout(() => {
-                    setActiveOrganizationMutation.mutate(firstOrg.id)
-                }, 300)
+                setActiveOrganizationMutation.mutate(firstOrg.id)
             }
         }
-    }, [organizationsQuery.data, activeOrganizationId, organizationsQuery.isLoading, session?.user, setActiveOrganizationMutation.isPending])
+    }, [organizationsQuery.data, activeOrganizationId, organizationsQuery.isLoading])
 
     // Derived active organization
     const activeOrganization = organizationsQuery.data?.find(org => org.id === activeOrganizationId) || null
 
-    // Determine loading state:
-    // - Show loading if organizations query is loading OR switching organization is pending
-    // - Only show loading if session exists (if no session, that's a different state)
-    const isLoading = session?.user 
-        ? (organizationsQuery.isLoading || setActiveOrganizationMutation.isPending)
-        : false
-
     return {
         organizations: organizationsQuery.data || [],
-        isLoading,
+        isLoading: isSessionLoading || (!!session?.user && organizationsQuery.isLoading),
         error: organizationsQuery.error,
         createOrganization: createOrganizationMutation.mutateAsync,
         setActiveOrganization: setActiveOrganizationMutation.mutateAsync,

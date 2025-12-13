@@ -17,21 +17,10 @@ export const useOutlines = (organizationId?: string) => {
 
     const outlinesQuery = useQuery({
         queryKey: ['outlines', organizationId],
-        queryFn: async () => {
-            console.log('📡 [useOutlines] Fetching outlines for org:', organizationId)
-            try {
-                const result = await getOutlinesUseCase.execute(organizationId!)
-                console.log('✅ [useOutlines] Outlines fetched:', result)
-                return result
-            } catch (error) {
-                console.error('❌ [useOutlines] Error fetching outlines:', error)
-                throw error
-            }
-        },
+        queryFn: () => getOutlinesUseCase.execute(organizationId!),
         enabled: !!organizationId,
         staleTime: 5 * 60 * 1000, // 5 minutes
         refetchOnWindowFocus: false,
-        retry: 2,
     })
 
     const updateOutlineMutation = useMutation({

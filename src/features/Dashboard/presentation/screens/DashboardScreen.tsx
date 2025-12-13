@@ -27,21 +27,19 @@ export function DashboardScreen() {
 
 
     // Redirect to verify-email if user's email is not verified
-    // Skip this check for social sign-in users (their emails are auto-verified)
     useEffect(() => {
         if (session?.user && !session.user.emailVerified) {
-            // Give social sign-in some time to update emailVerified status
-            // If still not verified after 1 second, redirect
-            const timer = setTimeout(() => {
-                if (session?.user && !session.user.emailVerified) {
-                    console.log('⚠️ Email not verified, redirecting to verify-email')
-                    router.push('/verify-email')
-                }
-            }, 1000)
-
-            return () => clearTimeout(timer)
+            router.push('/verify-email')
         }
     }, [session, router])
+
+    // Redirect to auth if not logged in and not loading
+    const { isPending: isSessionPending } = authClient.useSession()
+    useEffect(() => {
+        if (!isSessionPending && !session) {
+            router.push('/auth')
+        }
+    }, [isSessionPending, session, router])
 
     // Check for pending invitation after OAuth redirect
     useEffect(() => {
@@ -61,6 +59,10 @@ export function DashboardScreen() {
         if (activeOrganizationId) {
             await updateOutline(updatedOutline)
         }
+    }
+
+    if (!isSessionPending && !session) {
+        return <DashboardSkeleton />
     }
 
     return (
@@ -88,7 +90,7 @@ export function DashboardScreen() {
                 </>
             )}
 
-<EditOutlineSidebar
+            <EditOutlineSidebar
                 outline={selectedOutline}
                 isOpen={isEditSidebarOpen}
                 onClose={() => setIsEditSidebarOpen(false)}

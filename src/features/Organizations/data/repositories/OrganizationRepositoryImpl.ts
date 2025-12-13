@@ -6,24 +6,23 @@ import { IOrganizationRepository } from '../../domain/repositories/IOrganization
 export class OrganizationRepositoryImpl implements IOrganizationRepository {
     async listOrganizations(): Promise<Organization[]> {
         try {
-            console.log('📡 [OrganizationRepository] Fetching organizations list...')
             const { data, error } = await authClient.organization.list()
 
+            // If not authenticated, return empty array instead of throwing
+            // This allows the query to succeed and re-run when session is ready
             if (error) {
-                console.error('❌ [OrganizationRepository] Error from API:', error)
+                const errorStatus = (error as any)?.status
+                if (errorStatus === 401 || errorStatus === 403) {
+                    console.warn('⚠️ Not authenticated, returning empty organizations')
+                    return []
+                }
                 throw error
             }
-            
-            if (!data) {
-                console.log('⚠️ [OrganizationRepository] No data returned, returning empty array')
-                return []
-            }
 
-            console.log('✅ [OrganizationRepository] Organizations fetched:', data)
-            return data as Organization[]
-        } catch (error) {
-            console.error('❌ [OrganizationRepository] Exception fetching organizations:', error)
-            throw error
+            return (data as Organization[]) || []
+        } catch (err) {
+            console.error('❌ Failed to list organizations:', err)
+            throw err
         }
     }
 
